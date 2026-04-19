@@ -1,43 +1,43 @@
 # 🚀 CASE Usuario: Architectural Blueprint & System Design
 
-Este repositorio contiene la **documentación de arquitectura y diseño de sistemas** de la aplicación móvil **CASE Usuario**. El código fuente lógico detallado se mantiene en reservado para proteger la propiedad intelectual de la implementación, mientras que este documento explone la estructuración técnica, la infraestructura y las decisiones de ingeniería detrás del proyecto.
+This repository contains the **architecture and system design documentation** for the **CASE Usuario** mobile application. The core logical source code is kept in a private repository to protect the intellectual property of the implementation. However, this document details the technical structure, underlying infrastructure, and the engineering decisions that power the project.
 
-## 🛠️ Stack Tecnológico
+## 🛠️ Technology Stack
 - **Core**: [Flutter](https://flutter.dev/) SDK (Dart `v3.4.3+`)
-- **Gestión de Estado**: `provider` (Inyección de dependencias para el manejo de estados escalable).
-- **Backend-as-a-Service**: [Supabase](https://supabase.com/) (`supabase_flutter` y `supabase_auth_ui` para identidades y persistencia en tiempo real).
-- **Control de Eventos**: `easy_debounce` para mitigar la sobrecarga de peticiones backend ante ráfagas de interacciones.
-- **Micro-Interacciones UI**: `flutter_spinkit` para la entrega de feedback visual eficiente durante cargas de red.
+- **State Management**: `provider` (Dependency injection for scalable state handling).
+- **Backend-as-a-Service**: [Supabase](https://supabase.com/) (`supabase_flutter` and `supabase_auth_ui` for identity management and real-time persistence).
+- **Event Control**: `easy_debounce` to mitigate backend request overload during rapid user interactions.
+- **UI Micro-Interactions**: `flutter_spinkit` for efficient visual feedback and smooth loading indicators during network operations.
 
 ---
 
-## 🏗️ Estructura del Sistema (System Architecture)
+## 🏗️ System Architecture
 
-La aplicación sigue una arquitectura guiada por características (**Feature-First Modular Design**), lo que optimiza la mantenibilidad y delimita correctamente las fronteras lógicas:
+The application follows a **Feature-First Modular Design** architecture. This modern pattern optimizes maintainability and clearly defines the logical boundaries between different sections of the app:
 
 ```text
 lib/
-├── pages/                    # Subsistemas de interfaz agrupados por dominio de negocio:
-│   ├── AuthWrapper.dart      # Router Centinela: Orquesta la navegación basada en estado de sesión
-│   ├── customDrawer.dart     # Estructura de navegación lateral principal globalizada
-│   ├── home/                 # Subsistema de Dashboard y flujo post-login
-│   ├── login/                # Subsistema de autenticación de identidades existentes
-│   ├── quiz/                 # Subsistema de encuestas interactivo y autónomo
-│   ├── registro/             # Subsistema de onboarding y captura de nuevas cuentas
-│   └── widgets/              # UI atómica específica de subsistemas aislados
-├── colors.dart               # Sistema de Diseño: Tokens globales y paleta de marca centralizada
-└── main.dart                 # Root Orchestrator: Inyecta dependencias e inicializa BaaS
+├── pages/                    # UI Subsystems grouped by business domain:
+│   ├── AuthWrapper.dart      # Sentinel Router: Orchestrates navigation based on session state
+│   ├── customDrawer.dart     # Globalized main lateral navigation structure
+│   ├── home/                 # Dashboard subsystem and post-login flow
+│   ├── login/                # Existing identity authentication subsystem
+│   ├── quiz/                 # Interactive and autonomous survey subsystem
+│   ├── registro/             # Onboarding and new account capture subsystem
+│   └── widgets/              # Atomic UI specific to isolated subsystems
+├── colors.dart               # Design System: Global tokens and centralized brand palette
+└── main.dart                 # Root Orchestrator: Injects dependencies and initializes BaaS
 ```
 
-## 🧠 3 Desafíos de Ingeniería Resueltos
+## 🧠 3 Key Engineering Challenges Solved
 
-Basándome en la estructura y dependencias de la plataforma, abordé estos 3 grandes desafíos técnicos:
+Based on the structure and dependencies of the platform, the following three major technical challenges were successfully addressed:
 
-1. **Gestión Reactiva de Rutas Protegidas (AuthWrapper Paradigm)**
-   En lugar de inyectar rutas mediante comprobaciones secuenciales al cargar componentes, delegué la responsabilidad a un `AuthWrapper`. Este patrón observa el listener asíncrono de *Supabase* en tiempo real; si el token expira o el usuario es purgado de la sesión remotamente, la aplicación lo traslada instantáneamente del módulo `home` al módulo de `login` sin colgar la interfaz gráfica de usuario.
+1. **Reactive Protected Route Management (AuthWrapper Paradigm)**
+   Instead of securing routes via synchronous checks during component loads, the responsibility was delegated to a centralized `AuthWrapper`. This pattern observes the asynchronous *Supabase* state stream in real-time. If an auth token expires or if a user is revoked remotely, the application instantly transitions the user from the protected `home` environment back to the `login` flow, avoiding UI freezes or unauthorized blink states.
 
-2. **Modularidad y Escalabilidad Vertical por "Features"** 
-   Se refactorizó el paradigma genérico de organización ("controllers vs views") dividiendo el código en carpetas de característica (`home`, `quiz`, `registro`). Al agrupar los `widgets` o reglas exclusivas del módulo `quiz` dentro de su propio ecosistema, reduje exponencialmente las colisiones en Git y garantizo que cualquier nuevo módulo (ej. `payments`) se pueda integrar sin enredar otras lógicas ya aprobadas en producción.
+2. **Vertical Modularity & Feature-Based Scalability** 
+   The traditional organizational paradigm ("controllers vs. views") was refactored by splitting the codebase into feature-based modules (`home`, `quiz`, `registro`). By encapsulating the `widgets` and specific business rules of the `quiz` module inside its own self-contained folder ecosystem, Git merge conflicts were significantly reduced. This guarantees that implementing any new module (e.g., payments) won't inadvertently break stable logic already running in production.
 
-3. **Optimización de Desempeño Bidireccional (Debouncing & Inyección)** 
-   La conjunción de `provider` de inyección selectiva y `easy_debounce` resolvió los bloqueos (janks) que surgían en operaciones asíncronas intensas. El debouncing reduce el desborde de writes/reads concurrentes hacia la BD de Supabase garantizando un mejor uso de los recursos de la capa gratuita, mientras el *Provider* actualiza únicamente los fragmentos atómicos de UI que han mutado, omitiendo la recomposición de toda la rama principal de navegación.
+3. **Bidirectional Performance Optimization (Debouncing & Injection)** 
+   The combination of selective UI rebuilding (via `provider`) and interaction throttling (via `easy_debounce`) resolved UI jank during resource-intensive asynchronous operations. Debouncing handles the overflow of concurrent read/write requests to the Supabase database—drastically lowering bandwidth and preventing free-tier quota exhaustion. Meanwhile, the Provider is scoped to trigger granular redraws only on atomic UI fragments that mutated, skipping the costly recomposition of the main navigation tree entirely.
